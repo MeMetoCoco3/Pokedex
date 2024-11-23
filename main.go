@@ -1,93 +1,123 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/MeMetoCoco3/Pokedex/callAPI"
+	"github.com/MeMetoCoco3/Pokedex/internal"
+	"github.com/MeMetoCoco3/Pokedex/types"
 	"os"
 )
 
-type cliCommand struct {
-	name        string
-	description string
-	function    func(*config) error
-}
-
-type config struct {
-	pointLocation int
-}
-
-func callExit(c *config) error {
+func callExit(c *types.Config) error {
 	fmt.Println("\nSee you Pokemaniaco!")
 	os.Exit(0)
 	return nil
 }
 
-func callHelp(c *config) error {
+func callHelp(c *types.Config) error {
 	commands := getCommands()
-	fmt.Printf("Usage\n")
+	fmt.Printf("Usage:\n")
 	for _, command := range commands {
-		fmt.Printf("%s: %s\n", command.name, command.description)
+		fmt.Printf("%s: %s\n", command.Name, command.Description)
 	}
 	return nil
 }
 
-func callMap(c *config) error {
-	areas, err := callapi.GetArea(c.pointLocation)
+func callMap(c *types.Config) error {
+	// Ojo con esta maravilla, offset limit parameter.
+	fullURL := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", c.PointLocation)
+
+	reader, ok := c.Cache.Get(fullURL)
+	if !ok {
+		// Truco del almendruco
+		var err error
+		reader, err = callapi.GetPokeInfo(fullURL)
+
+		if err != nil {
+			return err
+		}
+
+		c.Cache.Add(fullURL, reader)
+	}
+
+	var res types.Respose
+	err := json.Unmarshal(reader, &res)
 	if err != nil {
 		return err
 	}
-	for _, areaInformation := range areas {
-		for _, area := range areaInformation.Results {
-			fmt.Println(area.Name)
-		}
+
+	for i, area := range res.Area {
+		fmt.Printf("%d. %s\n", i+c.PointLocation+1, area.Name)
 	}
-	c.pointLocation = c.pointLocation + 20
+	c.PointLocation = c.PointLocation + 20
 	return nil
 }
 
-func callMapb(c *config) error {
-	c.pointLocation = c.pointLocation - 20
-	areas, err := callapi.GetArea(c.pointLocation)
+func callMapb(c *types.Config) error {
+
+	c.PointLocation = c.PointLocation - 20
+	if c.PointLocation < 0 {
+		c.PointLocation = 0
+	}
+	fullURL := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", c.PointLocation)
+
+	reader, ok := c.Cache.Get(fullURL)
+	if !ok {
+		// Truco del almendruco
+		var err error
+		reader, err = callapi.GetPokeInfo(fullURL)
+
+		if err != nil {
+			return err
+		}
+
+		c.Cache.Add(fullURL, reader)
+	}
+
+	var res types.Respose
+	err := json.Unmarshal(reader, &res)
 	if err != nil {
 		return err
 	}
-	for _, areaInformation := range areas {
-		for _, area := range areaInformation.Results {
-			fmt.Println(area.Name)
-		}
+
+	for i, area := range res.Area {
+		fmt.Printf("%d. %s\n", i+c.PointLocation+1, area.Name)
 	}
 	return nil
+
 }
 
-func getCommands() map[string]cliCommand {
-	commands := map[string]cliCommand{
+func getCommands() map[string]types.CliCommand {
+	commands := map[string]types.CliCommand{
 		"help": {
-			name:        "help",
-			description: "Gives instructions on Pokedex usage",
-			function:    callHelp,
+			Name:        "help",
+			Description: "Gives instructions on Pokedex usage",
+			Function:    callHelp,
 		},
 		"exit": {
-			name:        "exit",
-			description: "Closes Pokedex",
-			function:    callExit,
+			Name:        "exit",
+			Description: "Closes Pokedex",
+			Function:    callExit,
 		},
 		"map": {
-			name:        "map",
-			description: "Shows 20 locations from the pokemon world.\n\tEach subsequent call shows the next 20.",
-			function:    callMap,
+			Name:        "map",
+			Description: "Shows 20 locations from the pokemon world.\n\tEach subsequent call shows the next 20.",
+			Function:    callMap,
 		},
 		"mapb": {
-			name:        "mapb",
-			description: "Shows 20 previous locations from the pokemon world\n\tEach subsequent call shows the next 20.",
-			function:    callMapb,
+			Name:        "mapb",
+			Description: "Shows 20 previous locations from the pokemon world\n\tEach subsequent call shows the next 20.",
+			Function:    callMapb,
 		},
 	}
 	return commands
 }
 
-func getDefaultConfig() *config {
-	c := &config{
-		pointLocation: 1,
+func getDefaultConfig() *types.Config {
+	c := &types.Config{
+		PointLocation: 0,
+		Cache:         pokecache.NewCache(5000),
 	}
 	return c
 }
@@ -104,7 +134,8 @@ func main() {
 		if command, ok := commands[input]; !ok {
 			fmt.Printf("Command '%s' not found\n", input)
 		} else {
-			command.function(config)
+			command.Function(config)
 		}
+		fmt.Println(config.PointLocation)
 	}
 }
