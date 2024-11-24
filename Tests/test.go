@@ -46,7 +46,7 @@ func TestReapLoop(t *testing.T) {
 	cache := pokecache.NewCache(baseTime)
 	cache.Add("https://example.com", []byte("testdata"))
 
-	_, ok := cache.Get("https://example.com")
+	_, ok := cache.Get("https:/example.com")
 	if !ok {
 		t.Errorf("expected to find key")
 		return
