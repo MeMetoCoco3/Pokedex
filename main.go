@@ -11,13 +11,13 @@ import (
 	"strings"
 )
 
-func callExit(c *types.Config, area string) error {
+func callExit(c *types.Config, argument string) error {
 	fmt.Println("\nSee you Pokemaniaco!")
 	os.Exit(0)
 	return nil
 }
 
-func callHelp(c *types.Config, area string) error {
+func callHelp(c *types.Config, argument string) error {
 	commands := getCommands()
 	fmt.Printf("Usage:\n")
 	for _, command := range commands {
@@ -26,7 +26,7 @@ func callHelp(c *types.Config, area string) error {
 	return nil
 }
 
-func callMap(c *types.Config, area string) error {
+func callMap(c *types.Config, argument string) error {
 	// Ojo con esta maravilla, offset limit parameter.
 	fullURL := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/?offset=%d&limit=20", c.PointLocation)
 
@@ -56,7 +56,7 @@ func callMap(c *types.Config, area string) error {
 	return nil
 }
 
-func callMapb(c *types.Config, area string) error {
+func callMapb(c *types.Config, argument string) error {
 
 	c.PointLocation = c.PointLocation - 20
 	if c.PointLocation < 0 {
@@ -90,9 +90,9 @@ func callMapb(c *types.Config, area string) error {
 
 }
 
-func callExplore(c *types.Config, area string) error {
+func callExplore(c *types.Config, argument string) error {
 	var err error
-	fullURL := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", area)
+	fullURL := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", argument)
 	reader, ok := c.Cache.Get(fullURL)
 	if !ok {
 		reader, err = callapi.GetPokeInfo(fullURL)
@@ -112,37 +112,66 @@ func callExplore(c *types.Config, area string) error {
 	return nil
 }
 
+func callCatch(c *types.Config, argument string) error {
+	fullURL := "https://pokeapi.co/api/v2/pokemon/" + argument
+	data, err := callapi.GetPokeInfo(fullURL)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return err
+	}
+	var pokemon types.Pokemon
+	err = json.Unmarshal(data, &pokemon)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return err
+	}
+
+	fmt.Printf("Name: %s \n\tHeight: %d Weight: %d\n", pokemon.Name, pokemon.Height, pokemon.Weight)
+	fmt.Println("\t\t--Stats--")
+	for _, stat := range pokemon.Stats {
+		fmt.Printf("\t%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+
+	return nil
+}
+
 func getCommands() map[string]types.CliCommand {
 	commands := map[string]types.CliCommand{
 		"help": {
-			Name:          "help",
-			Description:   "Gives instructions on Pokedex usage.",
-			Function:      callHelp,
-			AcceptsString: false,
+			Name:            "help",
+			Description:     "Gives instructions on Pokedex usage.",
+			Function:        callHelp,
+			AcceptsArgument: false,
 		},
 		"exit": {
-			Name:          "exit",
-			Description:   "Closes Pokedex.",
-			Function:      callExit,
-			AcceptsString: false,
+			Name:            "exit",
+			Description:     "Closes Pokedex.",
+			Function:        callExit,
+			AcceptsArgument: false,
 		},
 		"map": {
-			Name:          "map",
-			Description:   "Shows 20 locations from the pokemon world.\n\tEach subsequent call shows the next 20.",
-			Function:      callMap,
-			AcceptsString: false,
+			Name:            "map",
+			Description:     "Shows 20 locations from the pokemon world.\n\tEach subsequent call shows the next 20.",
+			Function:        callMap,
+			AcceptsArgument: false,
 		},
 		"mapb": {
-			Name:          "mapb",
-			Description:   "Shows 20 previous locations from the pokemon world.\n\tEach subsequent call shows the next 20.",
-			Function:      callMapb,
-			AcceptsString: false,
+			Name:            "mapb",
+			Description:     "Shows 20 previous locations from the pokemon world.\n\tEach subsequent call shows the next 20.",
+			Function:        callMapb,
+			AcceptsArgument: false,
 		},
 		"explore": {
-			Name:          "explore",
-			Description:   "Gives back a list of pokemons in a location.",
-			Function:      callExplore,
-			AcceptsString: true,
+			Name:            "explore",
+			Description:     "Gives back a list of pokemons in a location.",
+			Function:        callExplore,
+			AcceptsArgument: true,
+		},
+		"catch": {
+			Name:            "Catch",
+			Description:     "Gives user a chance to catch a pokemon",
+			Function:        callCatch,
+			AcceptsArgument: true,
 		},
 	}
 	return commands
@@ -186,9 +215,9 @@ func main() {
 		if commandStruct, ok := commands[inputCommand]; !ok {
 			fmt.Printf("Command '%s' not found\n", inputCommand)
 		} else {
-			if commandStruct.AcceptsString && numberWords == 1 {
+			if commandStruct.AcceptsArgument && numberWords == 1 {
 				fmt.Printf("Command '%s' requires an argument\n", inputCommand)
-			} else if !commandStruct.AcceptsString && numberWords > 1 {
+			} else if !commandStruct.AcceptsArgument && numberWords > 1 {
 				fmt.Printf("Command '%s' does not accept an argument\n", inputCommand)
 			} else {
 				err := commandStruct.Function(config, inputArgument)
