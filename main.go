@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/MeMetoCoco3/Pokedex/callAPI"
 	"github.com/MeMetoCoco3/Pokedex/internal"
 	"github.com/MeMetoCoco3/Pokedex/types"
-	"os"
-	"strings"
 )
 
 func callExit(c *types.Config, argument string) error {
@@ -113,26 +116,64 @@ func callExplore(c *types.Config, argument string) error {
 }
 
 func callCatch(c *types.Config, argument string) error {
+	var err error
 	fullURL := "https://pokeapi.co/api/v2/pokemon/" + argument
-	data, err := callapi.GetPokeInfo(fullURL)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
-		return err
-	}
-	var pokemon types.Pokemon
-	err = json.Unmarshal(data, &pokemon)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
-		return err
+
+	reader, ok := c.Cache.Get(fullURL)
+	if !ok {
+		fmt.Println("NOT CACHE")
+		reader, err = callapi.GetPokeInfo(fullURL)
+		if err != nil {
+			return err
+		}
+		c.Cache.Add(fullURL, reader)
+	} else {
+		fmt.Println("Cache")
 	}
 
-	fmt.Printf("Name: %s \n\tHeight: %d Weight: %d\n", pokemon.Name, pokemon.Height, pokemon.Weight)
-	fmt.Println("\t\t--Stats--")
-	for _, stat := range pokemon.Stats {
-		fmt.Printf("\t%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	var pokemon types.Pokemon
+	err = json.Unmarshal(reader, &pokemon)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return err
+	}
+	fmt.Printf("Throwing a Pokeball at %s\n", pokemon.Name)
+
+	time.Sleep(1 * time.Second)
+	for i := 1; i < 4; i++ {
+		fmt.Println(strings.Repeat("*", i))
+		time.Sleep(1 * time.Second)
+	}
+
+	if capturePokemon(pokemon.BaseExperience) {
+		c.Pokedex[pokemon.Name] = pokemon
+		fmt.Printf("You got a %s!!\n", pokemon.Name)
+		types.PrintStats(pokemon)
+
+	} else {
+		fmt.Printf("%s escaped...\n", pokemon.Name)
 	}
 
 	return nil
+}
+
+func capturePokemon(chances int) bool {
+	n := rand.IntN(400)
+	fmt.Printf("You got: %d\n", n)
+	if n > chances {
+		return true
+	}
+	return false
+}
+
+func callInspection(c *types.Config, pokemon string) error {
+	if value, ok := c.Pokedex[pokemon]; ok {
+		types.PrintStats(value)
+		return nil
+	} else {
+		return fmt.Errorf("%s is not catched...YET!!", pokemon)
+	}
+
 }
 
 func getCommands() map[string]types.CliCommand {
@@ -169,8 +210,14 @@ func getCommands() map[string]types.CliCommand {
 		},
 		"catch": {
 			Name:            "Catch",
-			Description:     "Gives user a chance to catch a pokemon",
+			Description:     "Gives user a chance to catch a pokemon.",
 			Function:        callCatch,
+			AcceptsArgument: true,
+		},
+		"inspect": {
+			Name:            "Inspect",
+			Description:     "Prints stats from a pokemon you already catched.",
+			Function:        callInspection,
 			AcceptsArgument: true,
 		},
 	}
@@ -181,6 +228,7 @@ func getDefaultConfig() *types.Config {
 	c := &types.Config{
 		PointLocation: 0,
 		Cache:         pokecache.NewCache(5000),
+		Pokedex:       make(map[string]types.Pokemon),
 	}
 	return c
 }
@@ -226,6 +274,5 @@ func main() {
 				}
 			}
 		}
-		fmt.Println(config.PointLocation)
 	}
 }

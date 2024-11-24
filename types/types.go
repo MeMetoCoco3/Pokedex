@@ -1,6 +1,9 @@
 package types
 
-import "github.com/MeMetoCoco3/Pokedex/internal"
+import (
+	"fmt"
+	"github.com/MeMetoCoco3/Pokedex/internal"
+)
 
 type CliCommand struct {
 	Name            string
@@ -12,6 +15,7 @@ type CliCommand struct {
 type Config struct {
 	PointLocation int
 	Cache         *pokecache.Cache
+	Pokedex       map[string]Pokemon
 }
 
 type Respose struct {
@@ -26,13 +30,34 @@ type Respose struct {
 }
 
 type Pokemon struct {
-	Name   string `json:"name"`
-	Height int    `json:"height"`
-	Weight int    `json:"weight"`
-	Stats  []struct {
+	Name           string `json:"name"`
+	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	Weight         int    `json:"weight"`
+
+	Types []struct {
+		PokemonType struct {
+			Name string `json:"name"`
+		} `json:"type"`
+	} `json:"types"`
+
+	Stats []struct {
 		BaseStat int `json:"base_stat"`
 		Stat     struct {
 			Name string `json:"name"`
 		} `json:"stat"`
 	} `json:"stats"`
+}
+
+func PrintStats(pokemon Pokemon) {
+	fmt.Printf("Name: %s \n\tHeight: %d Weight: %d\n", pokemon.Name, pokemon.Height, pokemon.Weight)
+	for _, pType := range pokemon.Types {
+		fmt.Printf("\t- %s", pType.PokemonType.Name)
+	}
+	fmt.Println("\t\t--Stats--")
+	fmt.Printf("\t%s: %d\n", "Base Experience", pokemon.BaseExperience)
+	for _, stat := range pokemon.Stats {
+		fmt.Printf("\t%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+
 }
