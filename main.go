@@ -93,7 +93,6 @@ func callMapb(c *types.Config, area string) error {
 func callExplore(c *types.Config, area string) error {
 	var err error
 	fullURL := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", area)
-	fmt.Println(fullURL)
 	reader, ok := c.Cache.Get(fullURL)
 	if !ok {
 		reader, err = callapi.GetPokeInfo(fullURL)
@@ -102,7 +101,6 @@ func callExplore(c *types.Config, area string) error {
 		}
 		c.Cache.Add(fullURL, reader)
 	}
-
 	var res types.Respose
 	err = json.Unmarshal(reader, &res)
 	if err != nil {

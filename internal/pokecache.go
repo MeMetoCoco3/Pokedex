@@ -44,7 +44,7 @@ func (c *Cache) cleanUp() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for key, entry := range c.cache {
-		if time.Now().Sub(entry.createdAt) > 5000 {
+		if time.Now().Sub(entry.createdAt) > 7*time.Second {
 			delete(c.cache, key)
 		}
 	}
