@@ -1,7 +1,7 @@
 package callapi
 
 import (
-	_ "fmt"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -12,6 +12,10 @@ func GetPokeInfo(url string) ([]byte, error) {
 		return nil, err
 	}
 	defer req.Body.Close()
+
+	if req.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("Your argument was not found!")
+	}
 
 	reader, err := io.ReadAll(req.Body)
 	if err != nil {

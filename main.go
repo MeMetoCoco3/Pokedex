@@ -118,6 +118,7 @@ func callExplore(c *types.Config, argument string) error {
 func callCatch(c *types.Config, argument string) error {
 	var err error
 	fullURL := "https://pokeapi.co/api/v2/pokemon/" + argument
+	fmt.Println(fullURL)
 
 	reader, ok := c.Cache.Get(fullURL)
 	if !ok {
@@ -157,6 +158,26 @@ func callCatch(c *types.Config, argument string) error {
 	return nil
 }
 
+func callInspection(c *types.Config, pokemon string) error {
+	if value, ok := c.Pokedex[pokemon]; ok {
+		types.PrintStats(value)
+		return nil
+	} else {
+		return fmt.Errorf("%s is not catched...YET!!\n", pokemon)
+	}
+}
+
+func callPokedex(c *types.Config, argument string) error {
+	if len(c.Pokedex) == 0 {
+		return fmt.Errorf("Pokedex is empty.\n")
+	}
+
+	for _, pokemon := range c.Pokedex {
+		fmt.Printf("\t- %s. \n", pokemon.Name)
+	}
+	return nil
+}
+
 func capturePokemon(chances int) bool {
 	n := rand.IntN(400)
 	fmt.Printf("You got: %d\n", n)
@@ -164,16 +185,6 @@ func capturePokemon(chances int) bool {
 		return true
 	}
 	return false
-}
-
-func callInspection(c *types.Config, pokemon string) error {
-	if value, ok := c.Pokedex[pokemon]; ok {
-		types.PrintStats(value)
-		return nil
-	} else {
-		return fmt.Errorf("%s is not catched...YET!!", pokemon)
-	}
-
 }
 
 func getCommands() map[string]types.CliCommand {
@@ -219,6 +230,12 @@ func getCommands() map[string]types.CliCommand {
 			Description:     "Prints stats from a pokemon you already catched.",
 			Function:        callInspection,
 			AcceptsArgument: true,
+		},
+		"pokedex": {
+			Name:            "Pokedex",
+			Description:     "Prints all catched pokemons.",
+			Function:        callPokedex,
+			AcceptsArgument: false,
 		},
 	}
 	return commands
