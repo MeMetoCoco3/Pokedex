@@ -15,17 +15,20 @@ import (
 )
 
 func callExit(c *types.Config, argument string) error {
-	fmt.Println("\nSee you Pokemaniaco!")
+	fmt.Println("\nClosing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
 func callHelp(c *types.Config, argument string) error {
 	commands := getCommands()
-	fmt.Printf("Usage:\n")
+
+	fmt.Println("Welcome to the Pokedex!")
+	fmt.Println("Usage:\n")
 	for _, command := range commands {
 		fmt.Printf("%s: %s\n", command.Name, command.Description)
 	}
+	fmt.Println()
 	return nil
 }
 
@@ -187,6 +190,12 @@ func capturePokemon(chances int) bool {
 	return false
 }
 
+func cleanInput(text string) []string {
+	lowerCase := strings.ToLower(text)
+	words := strings.Fields(lowerCase)
+	return words
+}
+
 func getCommands() map[string]types.CliCommand {
 	commands := map[string]types.CliCommand{
 		"help": {
@@ -251,38 +260,34 @@ func getDefaultConfig() *types.Config {
 }
 
 func main() {
-	fmt.Println("Pokego!")
+	fmt.Println("Welcome to the Pokedex!")
+	reader := bufio.NewScanner(os.Stdin)
 
 	commands := getCommands()
 	config := getDefaultConfig()
 	for {
 		fmt.Printf("pokedex> ")
+		reader.Scan()
+
 		var inputCommand, inputArgument string
+		words := cleanInput(reader.Text())
 
-		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading command input: ", err)
-		}
-		input = strings.TrimSpace(input)
-		words := strings.Fields(input)
-		numberWords := len(words)
-
-		if numberWords == 2 {
+		if len(words) == 2 {
 			inputCommand = words[0]
 			inputArgument = words[1]
-		} else if numberWords == 1 {
+		} else if len(words) == 1 {
 			inputCommand = words[0]
 		} else {
-			fmt.Printf("The command '%s' does not exist\n", input)
+			fmt.Printf("The command '%s' does not exist\n", words)
 			continue
 		}
 
 		if commandStruct, ok := commands[inputCommand]; !ok {
 			fmt.Printf("Command '%s' not found\n", inputCommand)
 		} else {
-			if commandStruct.AcceptsArgument && numberWords == 1 {
+			if commandStruct.AcceptsArgument && len(words) == 1 {
 				fmt.Printf("Command '%s' requires an argument\n", inputCommand)
-			} else if !commandStruct.AcceptsArgument && numberWords > 1 {
+			} else if !commandStruct.AcceptsArgument && len(words) > 1 {
 				fmt.Printf("Command '%s' does not accept an argument\n", inputCommand)
 			} else {
 				err := commandStruct.Function(config, inputArgument)
